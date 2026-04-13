@@ -19,7 +19,7 @@ In production, recommenders usually combine many signals—what you clicked, ski
 
 ## How The System Works
 
-### Song Features
+### Song Feature
 
 Each song in `data/songs.csv` carries 10 features used for scoring:
 
