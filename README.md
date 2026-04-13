@@ -11,7 +11,7 @@ Your goal is to:
 - Evaluate what your system gets right and wrong
 - Reflect on how this mirrors real world AI recommenders
 
-In production, recommenders usually combine many signals—what you clicked, skipped, or replayed; what similar users liked; item metadata; freshness and popularity; and product rules (diversity, fairness, sponsored placement). This simulation does not learn from behavior or crowds; it is a **content-based, rule-driven** system. It prioritizes **interpretable matching**: aligning each song’s genre, mood, and numeric features (such as energy and acousticness) with an explicit user profile, scoring every candidate with clear weights, then **ranking** by that score so results are transparent and easy to explain.
+In production, recommenders usually combine many signals—what you clicked, skipped, or replayed; what similar users liked; item metadata; freshness and popularity; and product rules (diversity, fairness, sponsored placement). This simulation does not learn from behavior or crowds; it is a **content-based, rule-driven** system. It prioritizes **interpretable matching**: aligning each song’s genre, mood, and numeric features (such as energy and acousticness) with an explicit user profile, scoring every candidate with clear weights, then **ranking** by that score so results are transparent and easy to explain
 
 ![Screenshot of the music recommender simulation](assets/image.png)
 
