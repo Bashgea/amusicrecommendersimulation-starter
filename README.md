@@ -11,23 +11,85 @@ Your goal is to:
 - Evaluate what your system gets right and wrong
 - Reflect on how this mirrors real world AI recommenders
 
-Replace this paragraph with your own summary of what your version does.
+In production, recommenders usually combine many signals—what you clicked, skipped, or replayed; what similar users liked; item metadata; freshness and popularity; and product rules (diversity, fairness, sponsored placement). This simulation does not learn from behavior or crowds; it is a **content-based, rule-driven** system. It prioritizes **interpretable matching**: aligning each song’s genre, mood, and numeric features (such as energy and acousticness) with an explicit user profile, scoring every candidate with clear weights, then **ranking** by that score so results are transparent and easy to explain.
+
+![Screenshot of the music recommender simulation](assets/image.png)
 
 ---
 
 ## How The System Works
 
-Explain your design in plain language.
+### Song Features
 
-Some prompts to answer:
+Each song in `data/songs.csv` carries 10 features used for scoring:
 
-- What features does each `Song` use in your system
-  - For example: genre, mood, energy, tempo
-- What information does your `UserProfile` store
-- How does your `Recommender` compute a score for each song
-- How do you choose which songs to recommend
+| Feature | Type | Description |
+|---|---|---|
+| `genre` | categorical | Musical category (pop, rock, lofi, jazz, etc.) |
+| `mood` | categorical | Emotional feel (happy, chill, intense, energetic, etc.) |
+| `energy` | 0–1 float | Perceived intensity and activity level |
+| `acousticness` | 0–1 float | Likelihood the track is acoustic vs. produced |
+| `valence` | 0–1 float | Musical positiveness (high = upbeat, low = dark) |
+| `danceability` | 0–1 float | How suitable the track is for dancing |
+| `instrumentalness` | 0–1 float | Predicts absence of vocals (high = instrumental) |
+| `speechiness` | 0–1 float | Presence of spoken word or rap |
+| `liveness` | 0–1 float | Presence of a live audience or live recording feel |
+| `tempo_bpm` | float | Beats per minute (loaded but not used in scoring — largely redundant with energy) |
 
-You can include a simple diagram or bullet list if helpful.
+### User Profile
+
+The user profile is a dictionary of target values that describes a listener's taste:
+
+```python
+user_prefs = {
+    "genre": "pop",               # preferred genre (categorical)
+    "mood": "energetic",          # preferred mood (categorical)
+    "target_energy": 0.85,        # wants high-energy tracks
+    "target_acousticness": 0.10,  # prefers produced/electronic sound
+    "target_valence": 0.80,       # upbeat, positive-sounding tracks
+    "target_danceability": 0.85,  # highly danceable
+    "target_speechiness": 0.08,   # minimal spoken word
+    "target_instrumentalness": 0.05, # vocal-forward songs preferred
+    "target_liveness": 0.12,      # studio recordings over live feel
+}
+```
+
+### Algorithm Recipe
+
+Every song in the catalog is scored against the user profile. The score has two parts: categorical bonuses and numeric similarity.
+
+**Categorical bonuses (binary match):**
+
+| Match | Points |
+|---|---|
+| Genre matches user's preferred genre | +2.0 |
+| Mood matches user's preferred mood | +1.5 |
+
+**Numeric similarity (per feature):**
+
+Each numeric feature contributes `weight × (1 − |target − actual|)`, where a perfect match yields the full weight and a maximum mismatch yields 0.
+
+| Feature | Weight | Tier |
+|---|---|---|
+| `energy` | ×1.2 | 1 — widest range, strongest separator |
+| `acousticness` | ×1.0 | 1 — cleanly separates electronic vs. organic |
+| `valence` | ×0.6 | 2 — compressed range, lower impact |
+| `danceability` | ×0.6 | 2 — correlates with energy, lower independent weight |
+| `instrumentalness` | ×0.5 | 2 — vocal preference signal |
+| `speechiness` | ×0.4 | 2 — low catalog variance |
+| `liveness` | ×0.3 | 2 — least user-facing preference |
+
+**Maximum possible score: 8.1** (2.0 + 1.5 + 1.2 + 1.0 + 0.6 + 0.6 + 0.5 + 0.4 + 0.3)
+
+All 18 songs are scored, sorted highest to lowest, and the top K are returned with their score and a plain-language explanation.
+
+### Potential Biases
+
+- **Genre over-prioritization.** The +2.0 genre bonus is large enough that a mediocre pop song can outrank an excellent rock or hip-hop song that matches nearly every numeric target. A great mood-and-energy match in the wrong genre may never surface.
+- **Mood label coarseness.** Moods like `intense` and `energetic` feel nearly identical to a listener, but the system treats them as completely different and awards zero overlap credit. A rock song tagged `intense` scores no mood bonus for a user who wants `energetic`.
+- **Profile is a single fixed point.** The user profile is one static dict. Real listeners have range — someone who usually wants chill lofi might want high-energy pop on a Friday. The system has no way to represent that.
+- **Catalog skew.** The 18-song catalog is not representative. Genres like classical, metal, and blues each have one song, so users whose taste aligns with those genres will always get a thin top-K regardless of score quality.
+- **Numeric features are synthetic.** The feature values were generated, not measured from audio. Scores reflect how internally consistent the data is, not how the songs actually sound.
 
 ---
 
